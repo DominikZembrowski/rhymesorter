@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+    <title>Rhymer Web test- By Ali&Dominik</title>
+
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+
+    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+
+    <style>
+      body {
+        background-color: #505050;
+        color: white;
+      }
+    </style>
+
+  </head>
+
+  <body>
+   <div class="container">
+    <div class="row">
+  <h4 >
+    Rhymer Web test <br>
+    Using PyScript
+    </h4>
+     <div class="input-field col s12" >
+            <textarea id="input_text" class="materialize-textarea"  rows="15"></textarea>
+            <label for="input_text">Input Text</label>
+          </div>
+    <div class="input-field col s12">
+            <textarea id="read_only_text" class="materialize-textarea" rows="15" style="overflow:hidden" ></textarea>
+            <label for="read_only_text">Rhymer Result (manipulate to show the full results)</label>
+          </div>
+    <button id="button" class="btn waves-effect waves-light" py-click="display_to_div()" id="display" >Rhyme !
+    </button>
+    </div>
+    </div>
+    <py-script>
+        import json
+        import re 
+        from js import document
+        from js import XMLHttpRequest
+        DATAMUSE_API = "https://api.datamuse.com/words?"
+        def get_request_to_json(url):
+            # create a new XMLHttpRequest object
+            req = XMLHttpRequest.new()
+            # open an HTTP GET request to the provided url with the asynchronous flag set to false
+            req.open("GET", url, False)
+            # send the request
+            req.send(None)
+            # convert the response to a string
+            output = str(req.response)
+            # parse the response as JSON and return the resulting object
+            return json.loads(output)
+
+
+        def get_last_word(sentence: str):
+            """
+            This function takes in a sentence as a string and returns the last word of that sentence.
+            It removes any special characters like ( ) . from the sentence and returns last word
+            Args:
+                sentence (str): Sentence as a string
+
+            Returns:
+                str: The last word of the sentence
+            """
+            # Replace all occurances of ')' with an empty string
+            sentence = sentence.replace(')', '')
+            # Replace all occurances of '(' with an empty string
+            sentence = sentence.replace('(', '')
+            # Replace all occurances of '.' with a space
+            sentence = sentence.replace('.', ' ')
+            # Split the sentence using the regex pattern '\W+' which will match all non-word characters
+            words = re.split(r'\W+', sentence)
+            # Return the last word in the list
+            return words[-1]
+
+        
+        # This function is used to get rhyming words for a given word using an API
+        def get_ryhmes(word: str, option='rel_rhy', max=100, api_endoint=DATAMUSE_API):
+            """
+            This function takes a word as an input and returns a list of rhyming words using the Datamuse API.
+            
+            Args:
+                word (str): The word for which the rhyming words are to be found
+                option (str): The type of rhyme, defaults to 'rel_rhy'
+                max (int): Maximum number of rhyming words to be returned, defaults to 100
+                api_endoint (str): The API endpoint to use, defaults to DATAMUSE_API
+            
+            Returns:
+                list(str): A list of rhyming words
+            """
+            # send a GET request to the API and parse the JSON response
+            rhyme = get_request_to_json(f"{api_endoint}{option}={word}&max={max}")
+            # return a list of words from the JSON response
+            return [elt['word'] for elt in rhyme]
+
+
+        def main(nry=False):
+            # Initialize the output list and a counter variable
+            output = []
+            i = 0
+
+            # Get the lines of text from the element with the ID "input_text"
+            lines = Element("input_text").element.value
+            # Split the text into lines
+            lines = lines.split('\n')
+            # Remove any lines that are less than 2 characters long
+            lines = [line  for line in lines if len(line)>2]
+            
+            # Iterate through the remaining lines of text
+            while len(lines) > 0:
+                # Get the last word of the first line of text
+                last_word  = get_last_word(lines[0].strip('\n'))
+                # Get all rhyming words for the last word
+                rhymes = get_ryhmes(last_word)
+                # Initialize a new sublist for the output
+                output.append([])
+                # Append the first line of text to the sublist
+                output[i].append(lines[0])
+                # Remove the first line of text from the lines list
+                lines.remove(lines[0])
+                # Create a copy of the lines list
+                lines_swap = lines.copy()
+                # Iterate through the copy of the lines list
+                for s in lines_swap:
+                    # Get the last word of the current line
+                    lw = get_last_word(s.strip('\n'))
+                    # Check if the last word is in the rhyming words list or if it's the same as the last word of the first line
+                    if lw in rhymes or lw == last_word:
+                        # If it is, remove the line from the original lines list
+                        lines.remove(s)
+                        # Append the line to the current sublist in the output
+                        output[i].append(s)
+                # Increase the counter variable
+                i += 1
+            # Sort the output list based on the number of lines in each sublist (descending order)
+            output.sort(key=len, reverse=True)
+            # Create a variable to store the final output string
+            show = ''
+            # Iterate through the output list
+            for lines in output:
+                # Iterate through the lines in each sublist
+                for line in lines:
+                    # Append the line to the final output string
+                    show = show + line + '\n'
+                # Append a newline after each sublist
+                show = show + "\n"
+            # Get the element with the ID "read_only_text"
+            txtarea = Element("read_only_text")
+            # Set the value of the element to the final output string
+            txtarea.element.value =show
+
+            
+                #asyncio.ensure_future(main())
+        def display_to_div():
+            #to be executed if the button is pressed
+            main(True)
+
+    </py-script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    
+  </body>
+</html>
